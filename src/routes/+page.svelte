@@ -1,7 +1,8 @@
 <script>
 	// @ts-nocheck
-	import { GITHUB_API_BASE_URL, GITHUB_API_TOKEN } from '$env/static/public';
-
+	import { env } from '$env/dynamic/public';
+	import { onMount } from 'svelte';
+	import { writable } from 'svelte/store';
 	let folders = []; // Array to store folder data
 	let isLoading = true; // Flag to track loading state
 
@@ -9,23 +10,26 @@
 	async function fetchData() {
 		try {
 			// Check if cached data exists in localStorage and is not expired
-			const cachedData = localStorage.getItem('githubFolders');
-			if (cachedData) {
-				const { data, timestamp } = JSON.parse(cachedData);
-				// Check if data is less than 1 hour old (adjust as needed)
-				if (Date.now() - timestamp < 3600000) {
-					folders = data;
-					isLoading = false;
-					return;
-				}
-			}
+			// const cachedData = localStorage.getItem('githubFolders');
+			// if (cachedData) {
+			// 	const { data, timestamp } = JSON.parse(cachedData);
+			// 	// Check if data is less than 1 hour old (adjust as needed)
+			// 	if (Date.now() - timestamp < 3600000) {
+			// 		folders = data;
+			// 		isLoading = false;
+			// 		return;
+			// 	}
+			// }
 
 			// Fetch repository contents
-			let response = await fetch('https://api.github.com/repos/jeoooo/KawaiiLogos/contents', {
-				headers: {
-					Authorization: `token ${GITHUB_API_TOKEN}`
+			let response = await fetch(
+				`${env.PUBLIC_GITHUB_API_BASE_URL}/repos/jeoooo/KawaiiLogos/contents`,
+				{
+					headers: {
+						Authorization: `token ${env.PUBLIC_GITHUB_API_TOKEN}`
+					}
 				}
-			});
+			);
 
 			// Handle HTTP errors
 			if (!response.ok) {
@@ -50,10 +54,10 @@
 				folders.map(async (folder) => {
 					// Fetch contents of each folder
 					let folderResponse = await fetch(
-						`https://api.github.com/repos/jeoooo/KawaiiLogos/contents/${folder.name}`,
+						`${env.PUBLIC_GITHUB_API_BASE_URL}/repos/jeoooo/KawaiiLogos/contents/${folder.name}`,
 						{
 							headers: {
-								Authorization: `token ${GITHUB_API_TOKEN}`
+								Authorization: `token ${env.PUBLIC_GITHUB_API_TOKEN}`
 							}
 						}
 					);
@@ -83,10 +87,10 @@
 			console.log('Final folders with files:', folders);
 
 			// Cache the fetched data in localStorage
-			localStorage.setItem(
-				'githubFolders',
-				JSON.stringify({ data: folders, timestamp: Date.now() })
-			);
+			// localStorage.setItem(
+			// 	'githubFolders',
+			// 	JSON.stringify({ data: folders, timestamp: Date.now() })
+			// );
 
 			// Set loading flag to false after data is fetched
 			isLoading = false;
@@ -97,7 +101,9 @@
 	}
 
 	// Fetch data when the component is mounted
-	fetchData();
+	onMount(async () => {
+		fetchData();
+	});
 </script>
 
 <h1>sawaratsuki kawaii logos</h1>
