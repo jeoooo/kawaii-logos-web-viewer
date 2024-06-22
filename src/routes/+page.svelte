@@ -1,8 +1,6 @@
 <script>
 	// @ts-nocheck
-	// import { GITHUB_API_BASE_URL, GITHUB_API_TOKEN } from '$env/static/private';
-	// Define the GitHub API token (replace with your actual token)
-	export let token = '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';
+	import { GITHUB_API_BASE_URL, GITHUB_API_TOKEN } from '$env/static/public';
 
 	let folders = []; // Array to store folder data
 	let isLoading = true; // Flag to track loading state
@@ -25,7 +23,7 @@
 			// Fetch repository contents
 			let response = await fetch('https://api.github.com/repos/jeoooo/KawaiiLogos/contents', {
 				headers: {
-					Authorization: `token ${token}`
+					Authorization: `token ${GITHUB_API_TOKEN}`
 				}
 			});
 
@@ -55,7 +53,7 @@
 						`https://api.github.com/repos/jeoooo/KawaiiLogos/contents/${folder.name}`,
 						{
 							headers: {
-								Authorization: `token ${token}`
+								Authorization: `token ${GITHUB_API_TOKEN}`
 							}
 						}
 					);
