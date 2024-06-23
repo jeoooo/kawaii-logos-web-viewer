@@ -1,87 +1,107 @@
-// // page.server.ts
-// import { GITHUB_API_BASE_URL, GITHUB_API_TOKEN } from '$env/static/private';
-// import type { RequestHandler } from '@sveltejs/kit';
+import { writable } from 'svelte/store';
+import { env } from '$env/dynamic/private';
 
-// // Define the GitHub repository and API token (replace with your actual values)
-// const repository = 'jeoooo/KawaiiLogos';
+const githubFolders = writable([]);
+const isLoading = writable(true);
+export const load = async () => {
+	try {
+		// Set loading state to true at the start of data fetching
+		isLoading.set(true);
 
-// export async function getKawaiiLogos(): Promise<Response> {
-// 	try {
-// 		// Fetch repository contents
-// 		const response = await fetch(`${GITHUB_API_BASE_URL}/repos/${repository}/contents`, {
-// 			headers: {
-// 				Authorization: `token ${GITHUB_API_TOKEN}`
-// 			}
-// 		});
+		// Check if cached data exists in localStorage and is not expired
+		// const cachedData = localStorage.getItem('githubFolders');
+		// if (cachedData) {
+		// 	const { data, timestamp } = JSON.parse(cachedData);
+		// 	// Check if data is less than 1 hour old (adjust as needed)
+		// 	if (Date.now() - timestamp < 3600000) {
+		// 		githubFolders.set(data);
+		// 		isLoading.set(false);
+		// 		return {
+		// 			sawaratsuki_data: data
+		// 		};
+		// 	}
+		// }
 
-// 		if (!response.ok) {
-// 			throw new Error(`Failed to fetch data from GitHub API. Status: ${response.status}`);
-// 		}
+		// Fetch repository contents
+		let response = await fetch(`${env.GITHUB_API_BASE_URL}/repos/jeoooo/KawaiiLogos/contents`, {
+			headers: {
+				Authorization: `token ${env.GITHUB_API_TOKEN}`
+			}
+		});
 
-// 		// Parse response to JSON
-// 		const githubData = await response.json();
+		// Handle HTTP errors
+		if (!response.ok) {
+			throw new Error(`HTTP error! Status: ${response.status}`);
+		}
 
-// 		// Filter folders excluding those starting with a dot, and map them with their respective files
-// 		const folders = githubData
-// 			.filter((item: any) => item.type === 'dir' && !item.name.startsWith('.'))
-// 			.map((item: any) => ({
-// 				name: item.name,
-// 				files: [] // Placeholder for files
-// 			}));
+		// Parse response to JSON
+		let data = await response.json();
+		console.log('Initial data from GitHub API:', data);
 
-// 		// Fetch files inside each folder
-// 		await Promise.all(
-// 			folders.map(async (folder: { name: any; files: any }) => {
-// 				const folderResponse = await fetch(
-// 					`https://api.github.com/repos/${repository}/contents/${folder.name}`,
-// 					{
-// 						headers: {
-// 							Authorization: `token ${GITHUB_API_TOKEN}`
-// 						}
-// 					}
-// 				);
+		// Filter out folders from the response, excluding those starting with a dot
+		let folders = data
+			.filter(
+				(item: { type: string; name: string }) => item.type === 'dir' && !item.name.startsWith('.')
+			)
+			.map((item: { name: any }) => ({
+				name: item.name,
+				files: [] // Placeholder for files
+			}));
+		console.log('Filtered folders:', folders);
 
-// 				if (!folderResponse.ok) {
-// 					console.error(
-// 						`Failed to fetch contents of folder ${folder.name}: ${folderResponse.status}`
-// 					);
-// 					return;
-// 				}
+		// Fetch files inside each folder
+		await Promise.all(
+			folders.map(async (folder: { name: any; files: any }) => {
+				// Fetch contents of each folder
+				let folderResponse = await fetch(
+					`${env.GITHUB_API_BASE_URL}/repos/jeoooo/KawaiiLogos/contents/${folder.name}`,
+					{
+						headers: {
+							Authorization: `token ${env.GITHUB_API_TOKEN}`
+						}
+					}
+				);
 
-// 				const folderData = await folderResponse.json();
+				// Handle HTTP errors
+				if (!folderResponse.ok) {
+					console.error(
+						`Failed to fetch contents of folder ${folder.name}: ${folderResponse.status}`
+					);
+					return;
+				}
 
-// 				// Filter and map image files
-// 				folder.files = folderData
-// 					.filter((item: any) => item.type === 'file' && /\.(jpeg|jpg|png|gif)$/i.test(item.name))
-// 					.map((item: any) => ({
-// 						name: item.name,
-// 						url: item.download_url
-// 					}));
-// 			})
-// 		);
+				// Parse folder contents to JSON
+				let folderData = await folderResponse.json();
+				console.log(`Contents of folder ${folder.name}:`, folderData);
 
-// 		// Return the fetched data to render the page
-// 		return {
-// 			status: 200,
-// 			headers: {
-// 				'Content-Type': 'application/json'
-// 			},
-// 			body: {
-// 				folders
-// 			}
-// 		};
-// 	} catch (error) {
-// 		console.error('Error fetching data:', error);
+				// Filter and map image files
+				folder.files = folderData
+					.filter(
+						(item: { type: string; name: string }) =>
+							item.type === 'file' && item.name.match(/\.(jpeg|jpg|png|gif)$/i)
+					)
+					.map((item: { name: any; download_url: any }) => ({
+						name: item.name,
+						url: item.download_url
+					}));
+			})
+		);
 
-// 		// Return an error response
-// 		return {
-// 			status: 500,
-// 			headers: {
-// 				'Content-Type': 'application/json'
-// 			},
-// 			body: {
-// 				error: 'Failed to fetch data from GitHub API'
-// 			}
-// 		};
-// 	}
-// }
+		console.log('Final folders with files:', folders);
+
+		// Cache the fetched data in localStorage
+		// localStorage.setItem('githubFolders', JSON.stringify({ data: folders, timestamp: Date.now() }));
+
+		// Update the Svelte store with the fetched data
+		githubFolders.set(folders);
+
+		return {
+			sawaratsuki_data: folders
+		};
+	} catch (error) {
+		console.error(error);
+	} finally {
+		// Set loading state to false after data fetching is complete
+		isLoading.set(false);
+	}
+};
