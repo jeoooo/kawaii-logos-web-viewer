@@ -39,7 +39,16 @@
 			{#if data.files.length > 0}
 				<div class="flex flex-wrap justify-center gap-2">
 					{#each data.files as file}
-						<img class="h-[100px] max-w-full rounded-lg" src={file.url} alt={file.name} />
+						<div class="relative">
+							<img class="h-[100px] max-w-full rounded-lg" src={file.url} alt={file.name} />
+							<a
+								href={file.url}
+								download={file.name}
+								class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-3 py-1 rounded-md shadow-sm hover:bg-blue-600"
+							>
+								Download
+							</a>
+						</div>
 					{/each}
 				</div>
 			{:else}
